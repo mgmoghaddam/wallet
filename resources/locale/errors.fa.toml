@@ -15,3 +15,11 @@
 "transaction type not withdrawal"="نوع تراکنش برداشت نیست"
 
 "discount code has been used"="کد تخفیف قبلا استفاده شده است"
+
+"gift not found"="کد هدیه یافت نشد"
+
+"gift usage limit reached"="محدودیت تعداد استفاده از کد هدیه به پایان رسیده است"
+
+"gift expired"="کد هدیه منقضی شده است"
+
+"gift not started"="کد هدیه فعال نشده است"

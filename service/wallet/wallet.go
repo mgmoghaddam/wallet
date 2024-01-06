@@ -100,6 +100,29 @@ func (s *Service) createTransactionAndUpdateWallet(id, amount int64, transaction
 }
 
 func (s *Service) AddGift(r *AddGiftRequest) (*DTO, error) {
+	layout := "2006-01-02T15:04:05Z07:00"
+	g, err := s.discount.GetGiftByCode(r.GiftCode)
+	if err != nil {
+		return nil, err
+	}
+	if g == nil {
+		return nil, serr.ValidationErr("gift", "gift not found", serr.ErrGiftNotFound)
+	}
+	if g.UsedCount >= g.UsageLimit {
+		return nil, serr.ValidationErr("gift", "gift usage limit reached", serr.ErrGiftUsageLimitReached)
+	}
+	expirationDate, err := time.Parse(layout, g.ExpirationDate)
+	if err != nil {
+		return nil, err
+	}
+	startDateTime, err := time.Parse(layout, g.StartDateTime)
+	if expirationDate.Before(time.Now()) {
+		return nil, serr.ValidationErr("gift", "gift expired", serr.ErrGiftExpired)
+	}
+	if startDateTime.After(time.Now()) {
+		return nil, serr.ValidationErr("gift", "gift not started", serr.ErrGiftNotStarted)
+	}
+
 	ws, err := s.GetByMemberID(r.MemberID)
 	if err != nil {
 		return nil, err

@@ -17,6 +17,10 @@ const (
 	ErrNotEnoughBalance             ErrorCode = "NOT_ENOUGH_BALANCE"
 	ErrTransactionTypeNotWithdrawal ErrorCode = "TRANSACTION_TYPE_NOT_WITHDRAWAL"
 	ErrDiscountClient               ErrorCode = "DISCOUNT_CLIENT"
+	ErrGiftNotFound                 ErrorCode = "GIFT_NOT_FOUND"
+	ErrGiftUsageLimitReached        ErrorCode = "GIFT_USAGE_LIMIT_REACHED"
+	ErrGiftExpired                  ErrorCode = "GIFT_EXPIRED"
+	ErrGiftNotStarted               ErrorCode = "GIFT_NOT_STARTED"
 )
 
 type ServiceError struct {
