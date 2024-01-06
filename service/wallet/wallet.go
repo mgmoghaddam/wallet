@@ -139,7 +139,7 @@ func (s *Service) AddGift(r *AddGiftRequest) (*DTO, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	s.RemoveWithKey(":MEMBER:" + r.GiftCode)
 	// Create a transaction and update the wallet
 	return s.createTransactionAndUpdateWallet(r.WalletID, gift.GiftAmount, transaction.Gift, "add gift transaction", gift.Code)
 }

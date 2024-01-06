@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 	"wallet/client/discount"
+	"wallet/internal/config"
 	"wallet/service/transaction"
 	"wallet/storage/wallet"
 )
@@ -80,7 +81,7 @@ func (s *Service) FromCreateRequest(r *CreateRequest) *wallet.Wallet {
 }
 
 func (s *Service) UpdateOrInsertInRedis(key string, g *DTO, exp time.Duration) error {
-	err := s.rdb.Set(context.Background(), key, g, exp).Err()
+	err := s.rdb.Set(context.Background(), config.RDBPrefix()+key, g, exp).Err()
 	if err != nil {
 		return err
 	}
@@ -88,7 +89,7 @@ func (s *Service) UpdateOrInsertInRedis(key string, g *DTO, exp time.Duration) e
 }
 
 func (s *Service) RetrieveFromRedis(key string) (*DTO, error) {
-	w, err := s.rdb.Get(context.Background(), key).Result()
+	w, err := s.rdb.Get(context.Background(), config.RDBPrefix()+key).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (s *Service) RemoveGiftFromRedis(w *DTO) {
 }
 
 func (s *Service) RemoveWithKey(k string) {
-	s.rdb.Del(context.Background(), k)
+	s.rdb.Del(context.Background(), config.RDBPrefix()+k)
 }
 
 func (w *DTO) MarshalBinary() ([]byte, error) {
