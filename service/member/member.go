@@ -1,23 +1,9 @@
 package member
 
-import "time"
-
-type DTO struct {
-	ID        int64     `json:"id"`
-	FirstName string    `json:"firstName"`
-	LastName  string    `json:"lastName"`
-	Email     string    `json:"email"`
-	Phone     string    `json:"phone"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-}
-
-type CreateRequest struct {
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Email     string `json:"email"`
-	Phone     string `json:"phone"`
-}
+import (
+	"github.com/rs/zerolog/log"
+	"time"
+)
 
 // creates a new member.
 func (s *Service) Create(r *CreateRequest) (*DTO, error) {
@@ -62,17 +48,24 @@ func (s *Service) GetByPhone(phone string) (*DTO, error) {
 }
 
 func (s *Service) GetMembersByGiftCode(gift string, limit, offset int) ([]*DTO, error) {
-	wallets, err := s.wallet.GetByDiscountCodeWithPagination(gift, limit, offset)
+	var members []*DTO
+	members, err := s.RetrieveFromRedis(keyRdb + gift)
 	if err != nil {
-		return nil, err
-	}
-	var result []*DTO
-	for _, w := range wallets {
-		member, err := s.member.GetById(w.MemberID)
+		wallets, err := s.wallet.GetByDiscountCodeWithPagination(gift, limit, offset)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, s.FromDBModel(member))
+		for _, w := range wallets {
+			member, err := s.member.GetById(w.MemberID)
+			if err != nil {
+				return nil, err
+			}
+			members = append(members, s.FromDBModel(member))
+		}
+		err = s.UpdateOrInsertInRedis(keyRdb+gift, members, time.Minute*10)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to update or insert in redis")
+		}
 	}
-	return result, nil
+	return members, nil
 }

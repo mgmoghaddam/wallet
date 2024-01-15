@@ -2,21 +2,10 @@ package member
 
 import (
 	"fmt"
-	"time"
 	"wallet/internal/serr"
 )
 
 const memberColumns = "id,first_name,last_name,email,phone,created_at,updated_at"
-
-type Member struct {
-	ID        int64     `db:"id"`
-	FirstName string    `db:"first_name"`
-	LastName  string    `db:"last_name"`
-	Email     string    `db:"email"`
-	Phone     string    `db:"phone"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-}
 
 func (s Storage) Create(u *Member) error {
 	sqlStmt := `
@@ -40,7 +29,7 @@ func (s Storage) Update(u *Member) error {
 	return nil
 }
 
-func (s Storage) getAllByPage(limit, offset int, count bool) ([]*Member, int, error) {
+func (s Storage) GetAllByPage(limit, offset int, count bool) ([]*Member, int, error) {
 	var total int
 	if count {
 		err := s.db.QueryRow("SELECT count(*) FROM member").Scan(&total)

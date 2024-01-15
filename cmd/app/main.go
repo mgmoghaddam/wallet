@@ -26,14 +26,34 @@ func main() {
 			externalClients,
 
 			// storages
-			memberStorage.New,
-			walletStorage.New,
-			transStorage.New,
+			fx.Annotate(
+				memberStorage.NewStorage,
+				fx.As(new(memberStorage.Repository)),
+			),
+			fx.Annotate(
+				walletStorage.NewStorage,
+				fx.As(new(walletStorage.Repository)),
+			),
+			fx.Annotate(
+				transStorage.NewStorage,
+				fx.As(new(transStorage.Repository)),
+			),
 
 			// services
-			transService.New,
-			walletService.New,
-			memberService.New,
+			fx.Annotate(
+				transService.New,
+				fx.As(new(transService.UseCase)),
+			),
+
+			fx.Annotate(
+				walletService.New,
+				fx.As(new(walletService.UseCase)),
+			),
+
+			fx.Annotate(
+				memberService.New,
+				fx.As(new(memberService.UseCase)),
+			),
 
 			// handlers
 			handler.NewMemberHandler,

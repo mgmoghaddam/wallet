@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"github.com/redis/go-redis/v9"
 	"log"
 	"wallet/client/discount"
 	"wallet/db"
@@ -21,7 +20,7 @@ func postgresDB() *sql.DB {
 	return psql
 }
 
-func redisDB() *redis.Client {
+func redisDB() db.RedisClient {
 	rdb, err := db.NewRedis(config.RDBHost(), config.RDBPassword(), config.RDBPort(), config.RDB())
 	if err != nil {
 		log.Fatalf("failed to initalize redis: %v", err)
@@ -29,9 +28,9 @@ func redisDB() *redis.Client {
 	return rdb
 }
 
-func externalClients() *discount.Client {
-	discountClient := discount.New(config.APIDiscount())
-	return discountClient
+func externalClients() discount.Client {
+	giftRepo := discount.NewHTTPClient(config.APIDiscount())
+	return giftRepo
 }
 
 func setupServer(s *server.Server, psql *sql.DB) {

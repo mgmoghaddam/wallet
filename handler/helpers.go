@@ -3,7 +3,6 @@ package handler
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"strconv"
@@ -72,19 +71,11 @@ func handleError(ctx *gin.Context, err error) {
 			},
 		)
 		return
-	case *pq.Error:
-		var e *pq.Error
-		errors.As(err, &e)
-		log.Error().Err(err).Str("trace_id", tID).Msg("pq error")
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			Error{Message: e.Detail, Code: "DB_ERROR", TraceID: tID},
-		)
 	default:
 		log.Error().Err(err).Str("trace_id", getTraceID(ctx)).Msg("unknown error")
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
-			Error{Code: serr.ErrInternal, Message: "internal server error", TraceID: tID},
+			Error{Code: serr.ErrInternal, Message: err.Error(), TraceID: tID},
 		)
 		return
 	}

@@ -9,10 +9,10 @@ import (
 )
 
 type WalletHandler struct {
-	wallet *wallet.Service
+	wallet wallet.UseCase
 }
 
-func NewWalletHandler(wallet *wallet.Service) WalletHandler {
+func NewWalletHandler(wallet wallet.UseCase) WalletHandler {
 	return WalletHandler{wallet: wallet}
 }
 

@@ -6,6 +6,15 @@ import (
 	"wallet/db"
 )
 
+type Repository interface {
+	Create(u *Member) error
+	Update(u *Member) error
+	GetAllByPage(limit, offset int, count bool) ([]*Member, int, error)
+	GetById(id int64) (*Member, error)
+	GetByPhone(phone string) (*Member, error)
+	WithTX(tx *sql.Tx) (Repository, error)
+}
+
 var (
 	ErrNoRowToUpdate = errors.New("no row to update")
 )
@@ -14,18 +23,18 @@ type Storage struct {
 	db db.SQLExt
 }
 
-func New(db *sql.DB) Storage {
+func NewStorage(db *sql.DB) Storage {
 	return Storage{db: db}
 }
 
 // WithTX returns a new storage with the given transaction replacing the db.
-func (s Storage) WithTX(tx *sql.Tx) (Storage, error) {
+func (s Storage) WithTX(tx *sql.Tx) (Repository, error) {
 	if tx == nil {
-		return Storage{}, db.ErrNoTXProvided
+		return nil, db.ErrNoTXProvided
 	}
 	switch s.db.(type) {
 	case *sql.Tx:
-		return Storage{}, db.ErrAlreadyInTX
+		return nil, db.ErrAlreadyInTX
 	case *sql.DB:
 		return Storage{db: tx}, nil
 	}

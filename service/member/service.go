@@ -4,27 +4,38 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"github.com/redis/go-redis/v9"
 	"sync"
 	"time"
+	"wallet/db"
 	"wallet/internal/config"
 	"wallet/service/wallet"
 	"wallet/storage/member"
 )
 
+const keyRdb = ":MEMBERS:"
+
+type UseCase interface {
+	Create(r *CreateRequest) (*DTO, error)
+	GetById(id int64) (*DTO, error)
+	Update(r *DTO) (*DTO, error)
+	GetByPhone(phone string) (*DTO, error)
+	GetMembersByGiftCode(gift string, limit, offset int) ([]*DTO, error)
+	WithTX(tx *sql.Tx) (*Service, error)
+}
+
 type Service struct {
-	member member.Storage
-	wallet *wallet.Service
-	rdb    *redis.Client
+	member member.Repository
+	wallet wallet.UseCase
+	rdb    db.RedisClient
 
 	mu   sync.Mutex
 	inTx bool
 }
 
 func New(
-	member member.Storage,
-	wallet *wallet.Service,
-	rdb *redis.Client,
+	member member.Repository,
+	wallet wallet.UseCase,
+	rdb db.RedisClient,
 ) *Service {
 	return &Service{
 		member: member,
@@ -33,7 +44,7 @@ func New(
 	}
 }
 
-func (s *Service) withTX(tx *sql.Tx) (*Service, error) {
+func (s *Service) WithTX(tx *sql.Tx) (*Service, error) {
 	var err error
 	service := *s
 	service.member, err = s.member.WithTX(tx)
@@ -81,7 +92,7 @@ func (s *Service) FromCreateRequest(r *CreateRequest) *member.Member {
 }
 
 func (s *Service) RetrieveFromRedis(key string) ([]*DTO, error) {
-	ms, err := s.rdb.Get(context.Background(), config.RDBPrefix()+key).Result()
+	ms, err := s.rdb.Get(context.Background(), config.RDBPrefix()+key)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +109,7 @@ func (s *Service) UpdateOrInsertInRedis(key string, ms []*DTO, exp time.Duration
 	if err != nil {
 		return err
 	}
-	err = s.rdb.Set(context.Background(), config.RDBPrefix()+key, m, exp).Err()
+	err = s.rdb.Set(context.Background(), config.RDBPrefix()+key, m, exp)
 	if err != nil {
 		return err
 	}

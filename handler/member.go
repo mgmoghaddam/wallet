@@ -9,10 +9,10 @@ import (
 )
 
 type MemberHandler struct {
-	member *member.Service
+	member member.UseCase
 }
 
-func NewMemberHandler(member *member.Service) MemberHandler {
+func NewMemberHandler(member member.UseCase) MemberHandler {
 	return MemberHandler{member: member}
 }
 

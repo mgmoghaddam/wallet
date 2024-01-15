@@ -8,15 +8,19 @@ import (
 	"wallet/internal/serr"
 )
 
-type Client struct {
-	net *http.Client
-
-	address string
+type Client interface {
+	GetGiftByCode(code string) (*Gift, error)
+	UseGift(code string) (*Gift, error)
 }
 
-func New(address string) *Client {
-	c := &Client{address: address}
-	c.net = &http.Client{Timeout: time.Second * 10}
+type HTTPClient struct {
+	address    string
+	httpClient *http.Client
+}
+
+func NewHTTPClient(address string) *HTTPClient {
+	c := &HTTPClient{address: address}
+	c.httpClient = &http.Client{Timeout: time.Second * 10}
 	return c
 }
 
@@ -32,33 +36,38 @@ type Gift struct {
 	UpdatedAt      string `json:"updatedAt"`
 }
 
-func (c *Client) GetGiftByCode(code string) (*Gift, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/gift/%s", c.address, code), nil)
+func (r *HTTPClient) GetGiftByCode(code string) (*Gift, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/gift/%s", r.address, code), nil)
 	if err != nil {
 		return nil, err
 	}
-	res, err := c.net.Do(req)
+	res, err := r.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request failed with status code %d", res.StatusCode)
+		var result map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		if err != nil {
+			return nil, err
+		}
+		return nil, serr.ValidationErr("getGift", result["message"].(string), serr.ErrDiscountClient)
 	}
-	var g Gift
-	err = json.NewDecoder(res.Body).Decode(&g)
+	var gift Gift
+	err = json.NewDecoder(res.Body).Decode(&gift)
 	if err != nil {
 		return nil, err
 	}
-	return &g, nil
+	return &gift, nil
 }
 
-func (c *Client) UseGift(code string) (*Gift, error) {
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/gift/use/%s", c.address, code), nil)
+func (r *HTTPClient) UseGift(code string) (*Gift, error) {
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/gift/use/%s", r.address, code), nil)
 	if err != nil {
 		return nil, err
 	}
-	res, err := c.net.Do(req)
+	res, err := r.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
@@ -71,11 +80,10 @@ func (c *Client) UseGift(code string) (*Gift, error) {
 		}
 		return nil, serr.ValidationErr("useGift", result["message"].(string), serr.ErrDiscountClient)
 	}
-	var g Gift
-	err = json.NewDecoder(res.Body).Decode(&g)
+	var gift Gift
+	err = json.NewDecoder(res.Body).Decode(&gift)
 	if err != nil {
 		return nil, err
 	}
-	return &g, nil
-
+	return &gift, nil
 }

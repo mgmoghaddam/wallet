@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"strconv"
 	"sync"
 	"time"
 	"wallet/client/discount"
+	"wallet/db"
 	"wallet/internal/config"
 	"wallet/service/transaction"
 	"wallet/storage/wallet"
@@ -17,22 +17,38 @@ import (
 
 const walletPrefix = "WALLET:%s"
 
-type Service struct {
-	wallet      wallet.Storage
-	transaction *transaction.Service
-	rdb         *redis.Client
+type UseCase interface {
+	Create(r *CreateRequest) (*DTO, error)
+	GetByID(id int64) (*DTO, error)
+	GetByMemberID(memberID int64) ([]*DTO, error)
+	AddGift(r *AddGiftRequest) (*DTO, error)
+	Recharge(id, amount int64) (*DTO, error)
+	Transfer(fromID, toID, amount int64) (*DTO, error)
+	Withdraw(id, amount int64) (*DTO, error)
+	Refund(id int64) (*DTO, error)
+	Delete(id int64) error
+	DeleteByMemberID(memberID int64) error
+	GetByDiscountCodeWithPagination(discountCode string, limit, offset int) ([]*DTO, error)
+	CreateTransactionAndUpdateWallet(id, amount int64, transactionType transaction.Type, description, discountCode string) (*DTO, error)
+	WithTX(tx *sql.Tx) (*Service, error)
+}
 
-	discount *discount.Client
+type Service struct {
+	wallet      wallet.Repository
+	transaction transaction.UseCase
+	rdb         db.RedisClient
+
+	discount discount.Client
 
 	mu   sync.Mutex
 	inTx bool
 }
 
 func New(
-	wallet wallet.Storage,
-	transaction *transaction.Service,
-	discount *discount.Client,
-	rdb *redis.Client,
+	wallet wallet.Repository,
+	transaction transaction.UseCase,
+	discount discount.Client,
+	rdb db.RedisClient,
 ) *Service {
 	return &Service{
 		wallet:      wallet,
@@ -81,7 +97,7 @@ func (s *Service) FromCreateRequest(r *CreateRequest) *wallet.Wallet {
 }
 
 func (s *Service) UpdateOrInsertInRedis(key string, g *DTO, exp time.Duration) error {
-	err := s.rdb.Set(context.Background(), config.RDBPrefix()+key, g, exp).Err()
+	err := s.rdb.Set(context.Background(), config.RDBPrefix()+key, g, exp)
 	if err != nil {
 		return err
 	}
@@ -89,12 +105,12 @@ func (s *Service) UpdateOrInsertInRedis(key string, g *DTO, exp time.Duration) e
 }
 
 func (s *Service) RetrieveFromRedis(key string) (*DTO, error) {
-	w, err := s.rdb.Get(context.Background(), config.RDBPrefix()+key).Result()
+	w, err := s.rdb.Get(context.Background(), config.RDBPrefix()+key)
 	if err != nil {
 		return nil, err
 	}
 	walletRecord := &DTO{}
-	err = json.Unmarshal([]byte(w), &walletRecord)
+	err = json.Unmarshal([]byte(w), walletRecord)
 	if err != nil {
 		return nil, err
 	}

@@ -10,27 +10,6 @@ import (
 	"wallet/service/transaction"
 )
 
-type DTO struct {
-	ID         int64     `json:"id"`
-	MemberID   int64     `json:"memberID"`
-	WalletName string    `json:"walletName"`
-	Balance    int64     `json:"balance"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
-}
-
-type CreateRequest struct {
-	MemberID   int64  `json:"memberID"`
-	WalletName string `json:"walletName"`
-	Balance    int64  `json:"balance"`
-}
-
-type AddGiftRequest struct {
-	MemberID int64  `json:"memberID"`
-	WalletID int64  `json:"walletID"`
-	GiftCode string `json:"giftCode"`
-}
-
 // create wallet
 func (s *Service) Create(r *CreateRequest) (*DTO, error) {
 	w := s.FromCreateRequest(r)
@@ -63,7 +42,7 @@ func (s *Service) GetByMemberID(memberID int64) ([]*DTO, error) {
 	return result, nil
 }
 
-func (s *Service) createTransactionAndUpdateWallet(id, amount int64, transactionType transaction.Type, description, discountCode string) (*DTO, error) {
+func (s *Service) CreateTransactionAndUpdateWallet(id, amount int64, transactionType transaction.Type, description, discountCode string) (*DTO, error) {
 	w, err := s.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -141,11 +120,11 @@ func (s *Service) AddGift(r *AddGiftRequest) (*DTO, error) {
 	}
 	s.RemoveWithKey(":MEMBER:" + r.GiftCode)
 	// Create a transaction and update the wallet
-	return s.createTransactionAndUpdateWallet(r.WalletID, gift.GiftAmount, transaction.Gift, "add gift transaction", gift.Code)
+	return s.CreateTransactionAndUpdateWallet(r.WalletID, gift.GiftAmount, transaction.Gift, "add gift transaction", gift.Code)
 }
 
 func (s *Service) Recharge(id, amount int64) (*DTO, error) {
-	return s.createTransactionAndUpdateWallet(id, amount, transaction.Recharge, "add recharge transaction", "")
+	return s.CreateTransactionAndUpdateWallet(id, amount, transaction.Recharge, "add recharge transaction", "")
 }
 
 func (s *Service) Transfer(fromID, toID, amount int64) (*DTO, error) {
@@ -165,11 +144,11 @@ func (s *Service) Transfer(fromID, toID, amount int64) (*DTO, error) {
 		if err != nil {
 			return err
 		}
-		_, err = txService.createTransactionAndUpdateWallet(fromID, -amount, transaction.Transfer, "transfer transaction", "")
+		_, err = txService.CreateTransactionAndUpdateWallet(fromID, -amount, transaction.Transfer, "transfer transaction", "")
 		if err != nil {
 			return err
 		}
-		_, err = txService.createTransactionAndUpdateWallet(toID, amount, transaction.Transfer, "transfer transaction", "")
+		_, err = txService.CreateTransactionAndUpdateWallet(toID, amount, transaction.Transfer, "transfer transaction", "")
 		if err != nil {
 			return err
 		}
@@ -190,7 +169,7 @@ func (s *Service) Withdraw(id, amount int64) (*DTO, error) {
 	if w.Balance < amount {
 		return nil, serr.ValidationErr("wallet", "not enough balance", serr.ErrNotEnoughBalance)
 	}
-	return s.createTransactionAndUpdateWallet(id, -amount, transaction.Withdraw, "withdraw transaction", "")
+	return s.CreateTransactionAndUpdateWallet(id, -amount, transaction.Withdraw, "withdraw transaction", "")
 }
 
 // refund wallet balance by transaction id
@@ -203,7 +182,7 @@ func (s *Service) Refund(id int64) (*DTO, error) {
 		return nil, serr.ValidationErr("transaction", "transaction type is not withdraw",
 			serr.ErrTransactionTypeNotWithdrawal)
 	}
-	return s.createTransactionAndUpdateWallet(t.WalletID, t.Amount, transaction.Refund, "refund transaction", "")
+	return s.CreateTransactionAndUpdateWallet(t.WalletID, t.Amount, transaction.Refund, "refund transaction", "")
 }
 
 // delete wallet by id and all transactions of that wallet
